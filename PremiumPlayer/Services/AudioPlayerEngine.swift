@@ -5,7 +5,7 @@ import Combine
 import UIKit
 
 // MARK: - AudioPlayerEngine
-// Advanced audio playback engine wrapping AVPlayer with:
+// Advanced audio/video playback engine wrapping AVPlayer with:
 // - Background playback via Audio/Background Modes
 // - Lock-screen controls (Now Playing Info Center)
 // - Queue management (play next/previous)
@@ -57,7 +57,8 @@ class AudioPlayerEngine: ObservableObject {
     @Published var isPlayerVisible: Bool = false
     
     // MARK: - Internal State
-    private var player: AVPlayer?
+    // Exposed as Published so PremiumAudioPlayerView can render the video layer
+    @Published var player: AVPlayer?
     private var timeObserverToken: Any?
     private var playerItemEndObserver: NSObjectProtocol?
     private var audioSessionConfigured = false
