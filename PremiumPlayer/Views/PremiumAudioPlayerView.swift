@@ -53,7 +53,10 @@ struct PremiumAudioPlayerView: View {
                 }
             }
         }
-        .presentationBackground(.ultraThinMaterial)
+        // FIX: .presentationBackground(.ultraThinMaterial) requires iOS 16.4+
+        // but deployment target is iOS 16.0, so replaced with .background
+        // which works on all supported iOS versions.
+        .background(.ultraThinMaterial)
         .sheet(isPresented: $showQueue) {
             QueueSheetView()
         }
