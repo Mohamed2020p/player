@@ -1,0 +1,422 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		000000000000000000000C01 /* PremiumPlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000001 /* PremiumPlayerApp.swift */; };
+		000000000000000000000C02 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000002 /* DesignSystem.swift */; };
+		000000000000000000000C03 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000003 /* Localization.swift */; };
+		000000000000000000000C04 /* MediaItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000004 /* MediaItem.swift */; };
+		000000000000000000000C05 /* DownloadTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000005 /* DownloadTask.swift */; };
+		000000000000000000000C06 /* DownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000006 /* DownloadService.swift */; };
+		000000000000000000000C07 /* AudioPlayerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000007 /* AudioPlayerEngine.swift */; };
+		000000000000000000000C08 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000008 /* MainTabView.swift */; };
+		000000000000000000000C09 /* HomeDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000009 /* HomeDashboardView.swift */; };
+		000000000000000000000C0A /* DownloadManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000000A /* DownloadManagerView.swift */; };
+		000000000000000000000C0B /* LocalLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000000B /* LocalLibraryView.swift */; };
+		000000000000000000000C0C /* PremiumAudioPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000000C /* PremiumAudioPlayerView.swift */; };
+		000000000000000000000C0D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000000D /* SettingsView.swift */; };
+		000000000000000000000C0E /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 000000000000000000000F0E /* AVFoundation.framework */; };
+		000000000000000000000C0F /* MediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 000000000000000000000F0F /* MediaPlayer.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		000000000000000000000000 /* PremiumPlayer */ = {isa = PBXFileReference; explicitFileType = "wrapper.application"; includeInIndex = 0; path = PremiumPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000001 /* PremiumPlayerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumPlayerApp.swift; sourceTree = "<group>"; };
+		000000000000000000000002 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		000000000000000000000003 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
+		000000000000000000000004 /* MediaItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaItem.swift; sourceTree = "<group>"; };
+		000000000000000000000005 /* DownloadTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadTask.swift; sourceTree = "<group>"; };
+		000000000000000000000006 /* DownloadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadService.swift; sourceTree = "<group>"; };
+		000000000000000000000007 /* AudioPlayerEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerEngine.swift; sourceTree = "<group>"; };
+		000000000000000000000008 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		000000000000000000000009 /* HomeDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDashboardView.swift; sourceTree = "<group>"; };
+		00000000000000000000000A /* DownloadManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadManagerView.swift; sourceTree = "<group>"; };
+		00000000000000000000000B /* LocalLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalLibraryView.swift; sourceTree = "<group>"; };
+		00000000000000000000000C /* PremiumAudioPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumAudioPlayerView.swift; sourceTree = "<group>"; };
+		00000000000000000000000D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		00000000000000000000000E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		000000000000000000000F0E /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		000000000000000000000F0F /* MediaPlayer.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaPlayer.framework; path = System/Library/Frameworks/MediaPlayer.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0000000000000000000001F0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000C0E /* AVFoundation.framework in Frameworks */,
+				000000000000000000000C0F /* MediaPlayer.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0000000000000000000000G0 /* PremiumPlayer */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000001 /* PremiumPlayerApp.swift */,
+				0000000000000000000000GC /* Core */,
+				0000000000000000000000GM /* Models */,
+				0000000000000000000000GS /* Services */,
+				0000000000000000000000GV /* Views */,
+				00000000000000000000000E /* Info.plist */,
+			);
+			path = PremiumPlayer;
+			sourceTree = "<group>";
+		};
+		0000000000000000000000GC /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000002 /* DesignSystem.swift */,
+				000000000000000000000003 /* Localization.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		0000000000000000000000GM /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000004 /* MediaItem.swift */,
+				000000000000000000000005 /* DownloadTask.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		0000000000000000000000GS /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000006 /* DownloadService.swift */,
+				000000000000000000000007 /* AudioPlayerEngine.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		0000000000000000000000GV /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000008 /* MainTabView.swift */,
+				000000000000000000000009 /* HomeDashboardView.swift */,
+				00000000000000000000000A /* DownloadManagerView.swift */,
+				00000000000000000000000B /* LocalLibraryView.swift */,
+				00000000000000000000000C /* PremiumAudioPlayerView.swift */,
+				00000000000000000000000D /* SettingsView.swift */,
+			);
+			path = "Views";
+			sourceTree = "<group>";
+		};
+		0000000000000000000000G1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000000 /* PremiumPlayer.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		0000000000000000000000G2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000F0E /* AVFoundation.framework */,
+				000000000000000000000F0F /* MediaPlayer.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		0000000000000000000000G3 /* Root */ = {
+			isa = PBXGroup;
+			children = (
+				0000000000000000000000G0 /* PremiumPlayer */,
+				0000000000000000000000G1 /* Products */,
+				0000000000000000000000G2 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0000000000000000000000T0 /* PremiumPlayer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0000000000000000000000CL /* Build configuration list for PBXNativeTarget "PremiumPlayer" */;
+			buildPhases = (
+				0000000000000000000000S0 /* Sources */,
+				0000000000000000000001F0 /* Frameworks */,
+				0000000000000000000000R0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PremiumPlayer;
+			productName = PremiumPlayer;
+			productReference = 000000000000000000000000 /* PremiumPlayer.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0000000000000000000000P0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1400;
+				LastUpgradeCheck = 1400;
+				TargetAttributes = {
+					0000000000000000000000T0 = {
+						CreatedOnToolsVersion = 14.0;
+					};
+				};
+			};
+			buildConfigurationList = 0000000000000000000000PC /* Build configuration list for PBXProject "PremiumPlayer" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 0000000000000000000000G3 /* Root */;
+			productRefGroup = 0000000000000000000000G1 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0000000000000000000000T0 /* PremiumPlayer */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0000000000000000000000R0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0000000000000000000000S0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000C01 /* PremiumPlayerApp.swift in Sources */,
+				000000000000000000000C02 /* DesignSystem.swift in Sources */,
+				000000000000000000000C03 /* Localization.swift in Sources */,
+				000000000000000000000C04 /* MediaItem.swift in Sources */,
+				000000000000000000000C05 /* DownloadTask.swift in Sources */,
+				000000000000000000000C06 /* DownloadService.swift in Sources */,
+				000000000000000000000C07 /* AudioPlayerEngine.swift in Sources */,
+				000000000000000000000C08 /* MainTabView.swift in Sources */,
+				000000000000000000000C09 /* HomeDashboardView.swift in Sources */,
+				000000000000000000000C0A /* DownloadManagerView.swift in Sources */,
+				000000000000000000000C0B /* LocalLibraryView.swift in Sources */,
+				000000000000000000000C0C /* PremiumAudioPlayerView.swift in Sources */,
+				000000000000000000000C0D /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0000000000000000000000BC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		0000000000000000000000BR /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PremiumPlayer/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PremiumPlayer;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboard_NAME = LaunchScreen.storyboard;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.c0derz.premiumplayer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		0000000000000000000000CR /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		0000000000000000000000DR /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PremiumPlayer/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PremiumPlayer;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboard_NAME = LaunchScreen.storyboard;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.c0derz.premiumplayer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0000000000000000000000CL /* Build configuration list for PBXNativeTarget "PremiumPlayer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0000000000000000000000BR /* Debug */,
+				0000000000000000000000DR /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0000000000000000000000PC /* Build configuration list for PBXProject "PremiumPlayer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0000000000000000000000BC /* Debug */,
+				0000000000000000000000CR /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 0000000000000000000000P0 /* Project object */;
+}
