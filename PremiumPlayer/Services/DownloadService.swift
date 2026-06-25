@@ -16,15 +16,15 @@ enum DownloadServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return LocalizedStrings.urlInvalidDesc
+            return "Invalid URL provided."
         case .networkError(let reason):
-            return "\(LocalizedStrings.commonError): \(reason)"
+            return "Network Error: \(reason)"
         case .downloadFailed(let reason):
-            return "\(LocalizedStrings.commonError): \(reason)"
+            return "Download Failed: \(reason)"
         case .insufficientSpace:
             return "Insufficient storage space"
         case .cancelled:
-            return LocalizedStrings.downloadCancel
+            return "Download Cancelled"
         case .fileSystemError:
             return "File system error"
         case .serverError(let code):
@@ -32,244 +32,6 @@ enum DownloadServiceError: LocalizedError {
         case .extractionFailed(let reason):
             return "Stream extraction failed: \(reason)"
         }
-    }
-}
-
-// MARK: - InnerTube Client Config
-// Multiple clients to try in order — if one fails, we fall through to the next.
-// ANDROID_VR and TVHTML5 clients often bypass age restrictions and return direct URLs.
-private struct InnerTubeClient {
-    let name: String
-    let clientName: String
-    let clientVersion: String
-    let apiKey: String
-    let userAgent: String
-    let extraContext: [String: Any]
-
-    static let all: [InnerTubeClient] = [
-        // Android VR client — most reliable for direct stream URLs
-        InnerTubeClient(
-            name: "ANDROID_VR",
-            clientName: "ANDROID_VR",
-            clientVersion: "1.60.19",
-            apiKey: "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
-            userAgent: "com.google.android.apps.youtube.vr.oculus/1.60.19 (Linux; U; Android 12; GB) gzip",
-            extraContext: ["deviceMake": "Oculus", "deviceModel": "Quest 3", "osName": "Android", "osVersion": "12"]
-        ),
-        // iOS client — second best
-        InnerTubeClient(
-            name: "IOS",
-            clientName: "IOS",
-            clientVersion: "19.29.1",
-            apiKey: "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
-            userAgent: "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X)",
-            extraContext: ["deviceModel": "iPhone16,2", "osName": "iPhone", "osVersion": "17.5.1.21F90"]
-        ),
-        // TV HTML5 client — works for most videos including some restricted ones
-        InnerTubeClient(
-            name: "TVHTML5",
-            clientName: "TVHTML5",
-            clientVersion: "7.20230405.08.01",
-            apiKey: "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
-            userAgent: "Mozilla/5.0 (SMART-TV; LINUX; Tizen 6.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/6.0 TV Safari/538.1",
-            extraContext: ["deviceMake": "Samsung", "deviceModel": "SmartTV2023", "osName": "Tizen", "osVersion": "6.0"]
-        )
-    ]
-}
-
-// MARK: - YouTubeExtractor
-// Tries multiple innertube clients in sequence until one returns a working stream URL.
-class YouTubeExtractor {
-
-    static func isSupported(url: URL) -> Bool {
-        guard let host = url.host?.lowercased() else { return false }
-        return host.contains("youtube.com") ||
-               host.contains("youtu.be") ||
-               host.contains("youtube-nocookie.com") ||
-               host.contains("music.youtube.com")
-    }
-
-    static func extractVideoID(from url: URL) -> String? {
-        let urlString = url.absoluteString
-
-        if url.host?.contains("youtu.be") == true {
-            let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-            if !path.isEmpty { return String(path.prefix(11)) }
-        }
-
-        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-           let v = components.queryItems?.first(where: { $0.name == "v" })?.value {
-            return v
-        }
-
-        let patterns = ["/embed/", "/v/", "/shorts/", "/watch/"]
-        for pattern in patterns {
-            if let range = urlString.range(of: pattern) {
-                let after = String(urlString[range.upperBound...])
-                let id = after.components(separatedBy: CharacterSet(charactersIn: "?&/#")).first ?? ""
-                if id.count >= 11 { return String(id.prefix(11)) }
-            }
-        }
-        return nil
-    }
-
-    // Try each client in sequence, resolve on first success
-    func fetchStreamURL(
-        videoID: String,
-        preferAudio: Bool,
-        completion: @escaping (Result<(streamURL: URL, title: String, artist: String, duration: TimeInterval), Error>) -> Void
-    ) {
-        tryClient(clients: InnerTubeClient.all, index: 0, videoID: videoID, preferAudio: preferAudio, completion: completion)
-    }
-
-    private func tryClient(
-        clients: [InnerTubeClient],
-        index: Int,
-        videoID: String,
-        preferAudio: Bool,
-        completion: @escaping (Result<(streamURL: URL, title: String, artist: String, duration: TimeInterval), Error>) -> Void
-    ) {
-        guard index < clients.count else {
-            completion(.failure(DownloadServiceError.extractionFailed("All clients failed. Video may be restricted or unavailable.")))
-            return
-        }
-
-        let client = clients[index]
-        fetchWithClient(client, videoID: videoID, preferAudio: preferAudio) { result in
-            switch result {
-            case .success(let info):
-                completion(.success(info))
-            case .failure:
-                // Try next client
-                self.tryClient(clients: clients, index: index + 1, videoID: videoID, preferAudio: preferAudio, completion: completion)
-            }
-        }
-    }
-
-    private func fetchWithClient(
-        _ client: InnerTubeClient,
-        videoID: String,
-        preferAudio: Bool,
-        completion: @escaping (Result<(streamURL: URL, title: String, artist: String, duration: TimeInterval), Error>) -> Void
-    ) {
-        let apiURLString = "https://www.youtube.com/youtubei/v1/player?key=\(client.apiKey)&prettyPrint=false"
-        guard let apiURL = URL(string: apiURLString) else {
-            completion(.failure(DownloadServiceError.invalidURL))
-            return
-        }
-
-        var request = URLRequest(url: apiURL, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(client.userAgent, forHTTPHeaderField: "User-Agent")
-        request.setValue("https://www.youtube.com", forHTTPHeaderField: "Origin")
-        request.setValue("https://www.youtube.com/watch?v=\(videoID)", forHTTPHeaderField: "Referer")
-        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
-
-        var clientContext: [String: Any] = [
-            "clientName": client.clientName,
-            "clientVersion": client.clientVersion,
-            "hl": "en",
-            "gl": "US",
-            "utcOffsetMinutes": 0
-        ]
-        for (k, v) in client.extraContext { clientContext[k] = v }
-
-        let payload: [String: Any] = [
-            "videoId": videoID,
-            "context": ["client": clientContext],
-            "playbackContext": [
-                "contentPlaybackContext": ["signatureTimestamp": 19950]
-            ],
-            "contentCheckOk": true,
-            "racyCheckOk": true
-        ]
-
-        guard let body = try? JSONSerialization.data(withJSONObject: payload) else {
-            completion(.failure(DownloadServiceError.extractionFailed("Failed to build request body")))
-            return
-        }
-        request.httpBody = body
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                completion(.failure(DownloadServiceError.networkError(error.localizedDescription)))
-                return
-            }
-
-            guard let data = data,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                completion(.failure(DownloadServiceError.extractionFailed("Invalid API response from client \(client.name)")))
-                return
-            }
-
-            // Check playability
-            if let status = json["playabilityStatus"] as? [String: Any],
-               let statusStr = status["status"] as? String,
-               statusStr != "OK" {
-                let reason = status["reason"] as? String ?? statusStr
-                completion(.failure(DownloadServiceError.extractionFailed("[\(client.name)] \(reason)")))
-                return
-            }
-
-            // Extract video details
-            var title = "Unknown Title"
-            var artist = "YouTube"
-            var duration: TimeInterval = 0
-
-            if let details = json["videoDetails"] as? [String: Any] {
-                title = details["title"] as? String ?? title
-                artist = details["author"] as? String ?? artist
-                if let lengthStr = details["lengthSeconds"] as? String,
-                   let length = TimeInterval(lengthStr) {
-                    duration = length
-                }
-            }
-
-            guard let streamingData = json["streamingData"] as? [String: Any] else {
-                completion(.failure(DownloadServiceError.extractionFailed("[\(client.name)] No streaming data")))
-                return
-            }
-
-            let adaptiveFormats = streamingData["adaptiveFormats"] as? [[String: Any]] ?? []
-            let regularFormats = streamingData["formats"] as? [[String: Any]] ?? []
-            let allFormats = adaptiveFormats + regularFormats
-
-            // Select best format
-            let selectedFormat: [String: Any]?
-
-            if preferAudio {
-                let audioFormats = adaptiveFormats.filter {
-                    ($0["mimeType"] as? String)?.contains("audio") == true
-                }
-                let sorted = audioFormats.sorted {
-                    ($0["bitrate"] as? Int ?? 0) > ($1["bitrate"] as? Int ?? 0)
-                }
-                // Prefer m4a for iOS compatibility
-                selectedFormat = sorted.first(where: {
-                    ($0["mimeType"] as? String)?.contains("mp4a") == true
-                }) ?? sorted.first
-            } else {
-                // For video: prefer progressive mp4 with both audio+video (regular formats)
-                let mp4Formats = regularFormats.filter {
-                    ($0["mimeType"] as? String)?.contains("video/mp4") == true
-                }
-                let sorted = mp4Formats.sorted {
-                    ($0["bitrate"] as? Int ?? 0) > ($1["bitrate"] as? Int ?? 0)
-                }
-                selectedFormat = sorted.first ?? allFormats.first
-            }
-
-            guard let format = selectedFormat,
-                  let urlString = format["url"] as? String,
-                  !urlString.isEmpty,
-                  let streamURL = URL(string: urlString) else {
-                completion(.failure(DownloadServiceError.extractionFailed("[\(client.name)] No direct URL in format. Video may require signature deciphering.")))
-                return
-            }
-
-            completion(.success((streamURL, title, artist, duration)))
-        }.resume()
     }
 }
 
@@ -285,7 +47,6 @@ class DownloadService: ObservableObject {
     private var urlSession: URLSession!
     private var downloadDelegates: [UUID: DownloadDelegate] = [:]
     private let downloadQueue = DispatchQueue(label: "com.premiumplayer.download", qos: .utility)
-    private let youtubeExtractor = YouTubeExtractor()
 
     private var documentsURL: URL {
         fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -360,6 +121,14 @@ class DownloadService: ObservableObject {
         return true
     }
 
+    private func isYouTubeURL(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return host.contains("youtube.com") ||
+               host.contains("youtu.be") ||
+               host.contains("youtube-nocookie.com") ||
+               host.contains("music.youtube.com")
+    }
+
     // MARK: - Start Download
     @discardableResult
     func startDownload(sourceURL: String, quality: DownloadQuality) -> UUID {
@@ -392,7 +161,7 @@ class DownloadService: ObservableObject {
         )
         queueManager.addTask(downloadTask)
 
-        if let url = URL(string: sourceURL), YouTubeExtractor.isSupported(url: url) {
+        if let url = URL(string: sourceURL), isYouTubeURL(url) {
             beginYouTubeDownload(task: downloadTask, url: url)
         } else {
             beginDirectDownload(task: downloadTask)
@@ -401,42 +170,78 @@ class DownloadService: ObservableObject {
         return mediaItemID
     }
 
-    // MARK: - YouTube Download
+    // MARK: - YouTube Download via Python Server
     private func beginYouTubeDownload(task: DownloadTask, url: URL) {
-        guard let videoID = YouTubeExtractor.extractVideoID(from: url) else {
-            finalizeTask(taskID: task.id, mediaItemID: task.mediaItemID, status: .failed, error: .extractionFailed("Could not extract video ID from URL"))
+        updateTaskStatus(taskID: task.id, mediaItemID: task.mediaItemID, status: .extracting, progress: 0.0)
+
+        let serverEndpoint = "http://159.89.97.95:5000/extract"
+        guard let apiURL = URL(string: serverEndpoint) else {
+            finalizeTask(taskID: task.id, mediaItemID: task.mediaItemID, status: .failed, error: .invalidURL)
             return
         }
 
-        updateTaskStatus(taskID: task.id, mediaItemID: task.mediaItemID, status: .extracting, progress: 0.0)
+        var request = URLRequest(url: apiURL, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 30)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
+        // تحقق مما إذا كان المستخدم اختار جودة صوتية
         let preferAudio = task.quality == .audioMP3
 
-        youtubeExtractor.fetchStreamURL(videoID: videoID, preferAudio: preferAudio) { [weak self] result in
+        let payload: [String: Any] = [
+            "url": url.absoluteString,
+            "preferAudio": preferAudio
+        ]
+
+        guard let body = try? JSONSerialization.data(withJSONObject: payload) else {
+            finalizeTask(taskID: task.id, mediaItemID: task.mediaItemID, status: .failed, error: .extractionFailed("Failed to build request body"))
+            return
+        }
+        request.httpBody = body
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
 
-            switch result {
-            case .success(let info):
-                DispatchQueue.main.async {
-                    if let index = self.libraryItems.firstIndex(where: { $0.id == task.mediaItemID }) {
-                        self.libraryItems[index].title = info.title
-                        self.libraryItems[index].artist = info.artist
-                        self.libraryItems[index].durationSeconds = info.duration
-                        self.saveLibrary()
-                    }
-                }
-                let streamTask = task
-                self.beginActualDownload(task: streamTask, overrideURL: info.streamURL)
-
-            case .failure(let error):
-                self.finalizeTask(
-                    taskID: task.id,
-                    mediaItemID: task.mediaItemID,
-                    status: .failed,
-                    error: .extractionFailed(error.localizedDescription)
-                )
+            if let error = error {
+                self.finalizeTask(taskID: task.id, mediaItemID: task.mediaItemID, status: .failed, error: .networkError(error.localizedDescription))
+                return
             }
-        }
+
+            guard let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                self.finalizeTask(taskID: task.id, mediaItemID: task.mediaItemID, status: .failed, error: .extractionFailed("Invalid response from server"))
+                return
+            }
+
+            // التحقق من وجود خطأ قادم من السيرفر
+            if let errorMsg = json["error"] as? String {
+                self.finalizeTask(taskID: task.id, mediaItemID: task.mediaItemID, status: .failed, error: .extractionFailed(errorMsg))
+                return
+            }
+
+            // استخراج الرابط المباشر
+            guard let streamURLString = json["streamURL"] as? String,
+                  let streamURL = URL(string: streamURLString) else {
+                self.finalizeTask(taskID: task.id, mediaItemID: task.mediaItemID, status: .failed, error: .extractionFailed("No direct URL found in response"))
+                return
+            }
+
+            // استخراج التفاصيل
+            let title = json["title"] as? String ?? "Unknown Title"
+            let artist = json["artist"] as? String ?? "YouTube"
+            let duration = json["duration"] as? TimeInterval ?? 0
+
+            // تحديث المكتبة بالعنوان والبيانات الجديدة قبل التحميل الفعلي
+            DispatchQueue.main.async {
+                if let index = self.libraryItems.firstIndex(where: { $0.id == task.mediaItemID }) {
+                    self.libraryItems[index].title = title
+                    self.libraryItems[index].artist = artist
+                    self.libraryItems[index].durationSeconds = duration
+                    self.saveLibrary()
+                }
+            }
+
+            // بدء التحميل الفعلي للملف المباشر
+            self.beginActualDownload(task: task, overrideURL: streamURL)
+        }.resume()
     }
 
     // MARK: - Direct URL Download
@@ -467,13 +272,11 @@ class DownloadService: ObservableObject {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 120
         config.timeoutIntervalForResource = 600
-        // YouTube stream URLs require these headers or you get 403
+        
+        // استخدام User-Agent قياسي وموثوق لضمان عدم رفض السيرفرات الخاصة بيوتيوب أو غيرها لطلب التحميل
         config.httpAdditionalHeaders = [
-            "User-Agent": "com.google.android.apps.youtube.vr.oculus/1.60.19 (Linux; U; Android 12; GB) gzip",
-            "Accept": "*/*",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Origin": "https://www.youtube.com",
-            "Referer": "https://www.youtube.com/"
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            "Accept": "*/*"
         ]
 
         let session = URLSession(configuration: config, delegate: delegate, delegateQueue: .main)
@@ -715,7 +518,6 @@ class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
     let mediaItemID: UUID
     let destinationURL: URL
     private(set) weak var downloadService: DownloadService?
-
     var session: URLSession?
     var downloadTask: URLSessionDownloadTask?
 
