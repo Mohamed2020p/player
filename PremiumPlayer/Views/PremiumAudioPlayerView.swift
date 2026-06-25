@@ -1,9 +1,10 @@
 import SwiftUI
+import AVKit
 
 // MARK: - PremiumAudioPlayerView
 // Full-screen immersive audio player with:
 // - Animated waveform visualization
-// - Cover art with blurred background
+// - Cover art with blurred background OR Video Player for MP4s
 // - Playback controls (play/pause, skip, seek)
 // - Queue display
 // - Repeat & Shuffle controls
@@ -28,7 +29,7 @@ struct PremiumAudioPlayerView: View {
                 // Main content
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
-                        // Cover art
+                        // Cover art or Video Player
                         coverArtSection
                             .padding(.top, 16)
                         
@@ -53,10 +54,7 @@ struct PremiumAudioPlayerView: View {
                 }
             }
         }
-        // FIX: .presentationBackground(.ultraThinMaterial) requires iOS 16.4+
-        // but deployment target is iOS 16.0, so replaced with .background
-        // which works on all supported iOS versions.
-        .background(.ultraThinMaterial)
+        .presentationBackground(.ultraThinMaterial)
         .sheet(isPresented: $showQueue) {
             QueueSheetView()
         }
@@ -101,7 +99,7 @@ struct PremiumAudioPlayerView: View {
         }
     }
     
-    // MARK: - Cover Art
+    // MARK: - Cover Art & Video Player
     private var coverArtSection: some View {
         ZStack {
             // Background glow
@@ -110,30 +108,42 @@ struct PremiumAudioPlayerView: View {
                 .frame(width: 240, height: 240)
                 .blur(radius: 40)
             
-            // Cover art placeholder
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            LuxuryTheme.Colors.violetElectric.opacity(0.7),
-                            LuxuryTheme.Colors.violetDeep.opacity(0.9)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            // Check if it's a video and we have an active player
+            if playerEngine.currentItem?.mediaType == .video, let activePlayer = playerEngine.player {
+                // Actual Video Player
+                VideoPlayer(player: activePlayer)
+                    .frame(width: UIScreen.main.bounds.width - 40, height: 240)
+                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .shadow(
+                        color: LuxuryTheme.Colors.violetElectric.opacity(0.4),
+                        radius: 30, x: 0, y: 10
                     )
-                )
-                .frame(width: 200, height: 200)
-                .overlay(
-                    Image(systemName: playerEngine.currentItem?.mediaType == .video ? "film" : "music.note")
-                        .font(.system(size: 50, weight: .medium))
-                        .foregroundColor(.white.opacity(0.85))
-                )
-                .shadow(
-                    color: LuxuryTheme.Colors.violetElectric.opacity(0.4),
-                    radius: 30, x: 0, y: 10
-                )
-                .scaleEffect(playerEngine.isPlaying ? 1.0 : 0.95)
-                .animation(.easeInOut(duration: 0.4), value: playerEngine.isPlaying)
+            } else {
+                // Cover art placeholder for Audio MP3s
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                LuxuryTheme.Colors.violetElectric.opacity(0.7),
+                                LuxuryTheme.Colors.violetDeep.opacity(0.9)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 200, height: 200)
+                    .overlay(
+                        Image(systemName: "music.note")
+                            .font(.system(size: 50, weight: .medium))
+                            .foregroundColor(.white.opacity(0.85))
+                    )
+                    .shadow(
+                        color: LuxuryTheme.Colors.violetElectric.opacity(0.4),
+                        radius: 30, x: 0, y: 10
+                    )
+                    .scaleEffect(playerEngine.isPlaying ? 1.0 : 0.95)
+                    .animation(.easeInOut(duration: 0.4), value: playerEngine.isPlaying)
+            }
         }
     }
     
