@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation  // FIX: Added — required for AVAudioSession in AppDelegate
 
 // MARK: - PremiumPlayerApp
 // Entry point with full-screen player overlay, splash branding,
@@ -124,7 +125,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        // Configure Audio Session for background playback
+        // FIX: AVAudioSession is now accessible because we import AVFoundation above
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(.playback, mode: .default, options: [.allowAirPlay, .allowBluetooth])
