@@ -4,6 +4,11 @@ import UIKit
 // MARK: - Luxury Design System for PremiumPlayer
 // Ultra-premium dark theme with Obsidian backgrounds, Electric Violet accents, and glassmorphic gradients
 
+// FIX: Added Color extension so Color.violetElectric resolves in LuxuryTheme.Effects.violetGlow()
+extension Color {
+    static let violetElectric = Color(red: 0.48, green: 0.24, blue: 1.00)
+}
+
 enum LuxuryTheme {
     
     // MARK: - Core Color Palette
@@ -118,6 +123,7 @@ enum LuxuryTheme {
     
     // MARK: - Shadows & Effects
     struct Effects {
+        // FIX: Color.violetElectric now resolves because of the Color extension above
         static func violetGlow(radius: CGFloat = 20) -> some View {
             Color.violetElectric
                 .opacity(0.3)
