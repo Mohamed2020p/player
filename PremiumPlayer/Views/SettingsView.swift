@@ -2,13 +2,13 @@ import SwiftUI
 
 // MARK: - SettingsView
 // Premium settings screen with:
-// - Language Selection (English / Arabic with RTL support)
+// - Language Selection (English / Arabic with RTL support) — FIXED: now triggers live UI refresh
 // - Storage Management (cache size, clear cache & downloads)
 // - About Section with Author Credits (@c0derz / Mohamed Annati)
 // - Premium branding touchpoints
 
 struct SettingsView: View {
-    @StateObject private var languageManager = LanguageManager.shared
+    @ObservedObject private var languageManager = LanguageManager.shared
     @StateObject private var downloadService = DownloadService.shared
     @StateObject private var playerEngine = AudioPlayerEngine.shared
     
@@ -16,7 +16,6 @@ struct SettingsView: View {
     @State private var showClearDownloadsConfirmation: Bool = false
     @State private var showCacheClearedToast: Bool = false
     @State private var showDownloadsClearedToast: Bool = false
-    @State private var languageDropdownExpanded: Bool = false
     
     var body: some View {
         ScrollView {
@@ -48,6 +47,8 @@ struct SettingsView: View {
             .edgesIgnoringSafeArea(.all)
         )
         .scrollContentBackground(.hidden)
+        // FIX: Apply layout direction reactively so the whole view flips when language changes
+        .environment(\.layoutDirection, languageManager.layoutDirection)
         .alert(LocalizedStrings.settingsConfirmClear, isPresented: $showClearCacheConfirmation) {
             Button(LocalizedStrings.settingsCancel, role: .cancel) { }
             Button(LocalizedStrings.settingsConfirm, role: .destructive) {
@@ -97,52 +98,73 @@ struct SettingsView: View {
             SectionHeader(icon: "globe", title: LocalizedStrings.settingsLanguage)
                 .padding(.horizontal, LuxuryTheme.Layout.screenPadding)
             
-            VStack(spacing: 4) {
+            VStack(spacing: 0) {
                 ForEach(AppLanguage.allCases, id: \.self) { langOption in
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            // FIX: Setting currentLanguage triggers @Published which
+                            // causes all ObservedObject observers to re-render with new lang
                             languageManager.currentLanguage = langOption
                         }
                     } label: {
                         HStack(spacing: 14) {
-                            Text(langOption.displayName)
-                                .font(LuxuryTheme.Typography.body(.medium))
-                                .foregroundColor(LuxuryTheme.Colors.platinumWhite)
+                            // Flag emoji for quick visual recognition
+                            Text(langOption == .arabic ? "🇸🇦" : "🇺🇸")
+                                .font(.system(size: 22))
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(langOption.displayName)
+                                    .font(LuxuryTheme.Typography.body(.medium))
+                                    .foregroundColor(LuxuryTheme.Colors.platinumWhite)
+                                
+                                Text(langOption == .arabic ? "Arabic (RTL)" : "English (LTR)")
+                                    .font(LuxuryTheme.Typography.caption())
+                                    .foregroundColor(LuxuryTheme.Colors.silverMist)
+                            }
                             
                             Spacer()
                             
                             if languageManager.currentLanguage == langOption {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 14, weight: .bold))
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 20, weight: .semibold))
                                     .foregroundColor(LuxuryTheme.Colors.violetElectric)
-                                    .frame(width: 28, height: 28)
-                                    .background(
-                                        Circle()
-                                            .fill(LuxuryTheme.Colors.violetElectric.opacity(0.15))
-                                    )
+                            } else {
+                                Circle()
+                                    .stroke(LuxuryTheme.Colors.silverMist.opacity(0.3), lineWidth: 1.5)
+                                    .frame(width: 20, height: 20)
                             }
                         }
                         .padding(.horizontal, LuxuryTheme.Layout.cardPadding)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 16)
+                        .background(
+                            languageManager.currentLanguage == langOption
+                                ? LuxuryTheme.Colors.violetElectric.opacity(0.08)
+                                : Color.clear
+                        )
                     }
                     .buttonStyle(.plain)
-                    .background(
-                        languageManager.currentLanguage == langOption
-                            ? LuxuryTheme.Colors.violetElectric.opacity(0.08)
-                            : Color.clear
-                    )
                     
                     if langOption != AppLanguage.allCases.last {
                         Divider()
+                            .background(LuxuryTheme.Colors.obsidianElevated)
                             .padding(.horizontal, LuxuryTheme.Layout.cardPadding)
-                            .background(LuxuryTheme.Colors.obsidianDeep)
                     }
                 }
             }
             .glassmorphicCard()
             .padding(.horizontal, LuxuryTheme.Layout.screenPadding)
             
-            .padding(.horizontal, LuxuryTheme.Layout.screenPadding)
+            // FIX: Info label telling user the UI updates instantly
+            HStack(spacing: 6) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 11))
+                Text(languageManager.currentLanguage == .arabic
+                     ? "سيتم تطبيق اللغة فوراً"
+                     : "Language applies instantly")
+                    .font(LuxuryTheme.Typography.caption())
+            }
+            .foregroundColor(LuxuryTheme.Colors.silverMist.opacity(0.7))
+            .padding(.horizontal, LuxuryTheme.Layout.screenPadding + 4)
         }
     }
     
@@ -175,17 +197,9 @@ struct SettingsView: View {
                 
                 Spacer()
                 
-                // Toggle for dark mode (always on in this build)
-                ZStack {
-                    Capsule()
-                        .fill(LuxuryTheme.Colors.violetElectric.opacity(0.3))
-                        .frame(width: 50, height: 28)
-                    
-                    Capsule()
-                        .fill(LuxuryTheme.Colors.violetElectric)
-                        .frame(width: 24, height: 24)
-                        .offset(x: 11)
-                }
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(LuxuryTheme.Colors.successEmerald)
             }
             .padding(LuxuryTheme.Layout.cardPadding)
             .glassmorphicCard()
@@ -196,20 +210,20 @@ struct SettingsView: View {
     // MARK: - Storage Section
     private var storageSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(icon: "externaldrive", title: LocalizedStrings.settingsStorage)
+            SectionHeader(icon: "internaldrive", title: LocalizedStrings.settingsStorage)
                 .padding(.horizontal, LuxuryTheme.Layout.screenPadding)
             
-            VStack(spacing: 4) {
+            VStack(spacing: 0) {
                 // Cache size row
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(LuxuryTheme.Colors.warningAmber.opacity(0.15))
+                            .fill(LuxuryTheme.Colors.violetElectric.opacity(0.15))
                             .frame(width: 44, height: 44)
                         
-                        Image(systemName: "archivebox")
+                        Image(systemName: "externaldrive.fill")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(LuxuryTheme.Colors.warningAmber)
+                            .foregroundColor(LuxuryTheme.Colors.violetElectric)
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
@@ -217,12 +231,16 @@ struct SettingsView: View {
                             .font(LuxuryTheme.Typography.body(.medium))
                             .foregroundColor(LuxuryTheme.Colors.platinumWhite)
                         
-                        Text(downloadService.totalStorageUsedFormatted)
+                        Text("\(downloadService.totalDownloadsCount) files")
                             .font(LuxuryTheme.Typography.caption())
                             .foregroundColor(LuxuryTheme.Colors.silverMist)
                     }
                     
                     Spacer()
+                    
+                    Text(downloadService.totalStorageUsedFormatted)
+                        .font(LuxuryTheme.Typography.body(.semibold))
+                        .foregroundColor(LuxuryTheme.Colors.violetGlow)
                 }
                 .padding(LuxuryTheme.Layout.cardPadding)
                 
@@ -237,17 +255,23 @@ struct SettingsView: View {
                     HStack(spacing: 14) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(LuxuryTheme.Colors.dangerCrimson.opacity(0.15))
+                                .fill(LuxuryTheme.Colors.warningAmber.opacity(0.15))
                                 .frame(width: 44, height: 44)
                             
-                            Image(systemName: "trash")
+                            Image(systemName: "arrow.triangle.2.circlepath")
                                 .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(LuxuryTheme.Colors.dangerCrimson)
+                                .foregroundColor(LuxuryTheme.Colors.warningAmber)
                         }
                         
-                        Text(LocalizedStrings.settingsClearCache)
-                            .font(LuxuryTheme.Typography.body(.medium))
-                            .foregroundColor(LuxuryTheme.Colors.dangerCrimson)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(LocalizedStrings.settingsClearCache)
+                                .font(LuxuryTheme.Typography.body(.medium))
+                                .foregroundColor(LuxuryTheme.Colors.dangerCrimson)
+                            
+                            Text("Keeps library entries, removes temp files")
+                                .font(LuxuryTheme.Typography.caption())
+                                .foregroundColor(LuxuryTheme.Colors.silverMist)
+                        }
                         
                         Spacer()
                         
@@ -310,9 +334,7 @@ struct SettingsView: View {
                 .padding(.horizontal, LuxuryTheme.Layout.screenPadding)
             
             VStack(spacing: 16) {
-                // Branding / Developer Card
                 VStack(alignment: .center, spacing: 14) {
-                    // App icon
                     ZStack {
                         RoundedRectangle(cornerRadius: 22, style: .continuous)
                             .fill(LuxuryTheme.Gradients.accentPrimary)
@@ -335,7 +357,6 @@ struct SettingsView: View {
                             .foregroundColor(LuxuryTheme.Colors.violetGlow)
                     }
                     
-                    // Author Credit
                     VStack(spacing: 2) {
                         Text(LocalizedStrings.developedBy)
                             .font(LuxuryTheme.Typography.caption())
@@ -351,7 +372,6 @@ struct SettingsView: View {
                     }
                     .padding(.top, 6)
                     
-                    // Social / Brand tagline
                     Text(LocalizedStrings.settingsAllRightsReserved)
                         .font(LuxuryTheme.Typography.caption())
                         .foregroundColor(LuxuryTheme.Colors.silverMist.opacity(0.6))
@@ -359,7 +379,6 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
                 
-                // Info rows
                 VStack(spacing: 14) {
                     InfoRow(icon: "person.fill", label: LocalizedStrings.settingsDeveloper, value: LocalizedStrings.settingsDeveloperName)
                     InfoRow(icon: "at", label: "Social", value: LocalizedStrings.settingsDeveloperHandle)
@@ -369,7 +388,6 @@ struct SettingsView: View {
                 Divider()
                     .background(LuxuryTheme.Colors.obsidianElevated)
                 
-                // Compact links section
                 HStack(spacing: 8) {
                     LinkButton(icon: "globe", text: "Website")
                     LinkButton(icon: "star.fill", text: LocalizedStrings.settingsRateApp)
@@ -428,9 +446,7 @@ struct SettingsView: View {
     }
     
     private func performClearDownloads() {
-        // Stop playback
         playerEngine.clearQueue()
-        // Delete all
         downloadService.clearAllDownloads()
         withAnimation {
             showDownloadsClearedToast = true
@@ -499,7 +515,6 @@ struct LinkButton: View {
     
     var body: some View {
         Button {
-            // Action handled where needed
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: icon)
