@@ -35,12 +35,52 @@ enum DownloadServiceError: LocalizedError {
     }
 }
 
+// MARK: - InnerTube Client Config
+// Multiple clients to try in order — if one fails, we fall through to the next.
+// ANDROID_VR and TVHTML5 clients often bypass age restrictions and return direct URLs.
+private struct InnerTubeClient {
+    let name: String
+    let clientName: String
+    let clientVersion: String
+    let apiKey: String
+    let userAgent: String
+    let extraContext: [String: Any]
+
+    static let all: [InnerTubeClient] = [
+        // Android VR client — most reliable for direct stream URLs
+        InnerTubeClient(
+            name: "ANDROID_VR",
+            clientName: "ANDROID_VR",
+            clientVersion: "1.60.19",
+            apiKey: "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
+            userAgent: "com.google.android.apps.youtube.vr.oculus/1.60.19 (Linux; U; Android 12; GB) gzip",
+            extraContext: ["deviceMake": "Oculus", "deviceModel": "Quest 3", "osName": "Android", "osVersion": "12"]
+        ),
+        // iOS client — second best
+        InnerTubeClient(
+            name: "IOS",
+            clientName: "IOS",
+            clientVersion: "19.29.1",
+            apiKey: "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
+            userAgent: "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X)",
+            extraContext: ["deviceModel": "iPhone16,2", "osName": "iPhone", "osVersion": "17.5.1.21F90"]
+        ),
+        // TV HTML5 client — works for most videos including some restricted ones
+        InnerTubeClient(
+            name: "TVHTML5",
+            clientName: "TVHTML5",
+            clientVersion: "7.20230405.08.01",
+            apiKey: "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8",
+            userAgent: "Mozilla/5.0 (SMART-TV; LINUX; Tizen 6.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/6.0 TV Safari/538.1",
+            extraContext: ["deviceMake": "Samsung", "deviceModel": "SmartTV2023", "osName": "Tizen", "osVersion": "6.0"]
+        )
+    ]
+}
+
 // MARK: - YouTubeExtractor
-// Pure Swift extraction of YouTube (and YouTube-like) stream URLs.
-// Uses the same innertube API that yt-dlp uses internally — no server needed.
+// Tries multiple innertube clients in sequence until one returns a working stream URL.
 class YouTubeExtractor {
 
-    // Supported host patterns
     static func isSupported(url: URL) -> Bool {
         guard let host = url.host?.lowercased() else { return false }
         return host.contains("youtube.com") ||
@@ -49,23 +89,19 @@ class YouTubeExtractor {
                host.contains("music.youtube.com")
     }
 
-    // Extract video ID from any YouTube URL format
     static func extractVideoID(from url: URL) -> String? {
         let urlString = url.absoluteString
 
-        // youtu.be/<id>
         if url.host?.contains("youtu.be") == true {
             let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-            if !path.isEmpty { return path }
+            if !path.isEmpty { return String(path.prefix(11)) }
         }
 
-        // ?v=<id>
         if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
            let v = components.queryItems?.first(where: { $0.name == "v" })?.value {
             return v
         }
 
-        // /embed/<id> or /v/<id> or /shorts/<id>
         let patterns = ["/embed/", "/v/", "/shorts/", "/watch/"]
         for pattern in patterns {
             if let range = urlString.range(of: pattern) {
@@ -77,45 +113,80 @@ class YouTubeExtractor {
         return nil
     }
 
-    // Main extraction — calls YouTube's innertube API directly
+    // Try each client in sequence, resolve on first success
     func fetchStreamURL(
         videoID: String,
         preferAudio: Bool,
         completion: @escaping (Result<(streamURL: URL, title: String, artist: String, duration: TimeInterval), Error>) -> Void
     ) {
-        // Innertube API — same endpoint yt-dlp uses
-        let apiURL = URL(string: "https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8")!
+        tryClient(clients: InnerTubeClient.all, index: 0, videoID: videoID, preferAudio: preferAudio, completion: completion)
+    }
 
-        var request = URLRequest(url: apiURL)
+    private func tryClient(
+        clients: [InnerTubeClient],
+        index: Int,
+        videoID: String,
+        preferAudio: Bool,
+        completion: @escaping (Result<(streamURL: URL, title: String, artist: String, duration: TimeInterval), Error>) -> Void
+    ) {
+        guard index < clients.count else {
+            completion(.failure(DownloadServiceError.extractionFailed("All clients failed. Video may be restricted or unavailable.")))
+            return
+        }
+
+        let client = clients[index]
+        fetchWithClient(client, videoID: videoID, preferAudio: preferAudio) { result in
+            switch result {
+            case .success(let info):
+                completion(.success(info))
+            case .failure:
+                // Try next client
+                self.tryClient(clients: clients, index: index + 1, videoID: videoID, preferAudio: preferAudio, completion: completion)
+            }
+        }
+    }
+
+    private func fetchWithClient(
+        _ client: InnerTubeClient,
+        videoID: String,
+        preferAudio: Bool,
+        completion: @escaping (Result<(streamURL: URL, title: String, artist: String, duration: TimeInterval), Error>) -> Void
+    ) {
+        let apiURLString = "https://www.youtube.com/youtubei/v1/player?key=\(client.apiKey)&prettyPrint=false"
+        guard let apiURL = URL(string: apiURLString) else {
+            completion(.failure(DownloadServiceError.invalidURL))
+            return
+        }
+
+        var request = URLRequest(url: apiURL, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        request.setValue(client.userAgent, forHTTPHeaderField: "User-Agent")
         request.setValue("https://www.youtube.com", forHTTPHeaderField: "Origin")
         request.setValue("https://www.youtube.com/watch?v=\(videoID)", forHTTPHeaderField: "Referer")
+        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
 
-        // Innertube payload mimicking iOS client — gives us direct stream URLs
+        var clientContext: [String: Any] = [
+            "clientName": client.clientName,
+            "clientVersion": client.clientVersion,
+            "hl": "en",
+            "gl": "US",
+            "utcOffsetMinutes": 0
+        ]
+        for (k, v) in client.extraContext { clientContext[k] = v }
+
         let payload: [String: Any] = [
             "videoId": videoID,
-            "context": [
-                "client": [
-                    "clientName": "IOS",
-                    "clientVersion": "19.29.1",
-                    "deviceModel": "iPhone16,2",
-                    "osName": "iPhone",
-                    "osVersion": "17.5.1.21F90",
-                    "hl": "en",
-                    "gl": "US"
-                ]
-            ],
+            "context": ["client": clientContext],
             "playbackContext": [
-                "contentPlaybackContext": [
-                    "signatureTimestamp": 19950
-                ]
-            ]
+                "contentPlaybackContext": ["signatureTimestamp": 19950]
+            ],
+            "contentCheckOk": true,
+            "racyCheckOk": true
         ]
 
         guard let body = try? JSONSerialization.data(withJSONObject: payload) else {
-            completion(.failure(DownloadServiceError.extractionFailed("Failed to build request")))
+            completion(.failure(DownloadServiceError.extractionFailed("Failed to build request body")))
             return
         }
         request.httpBody = body
@@ -128,16 +199,16 @@ class YouTubeExtractor {
 
             guard let data = data,
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                completion(.failure(DownloadServiceError.extractionFailed("Invalid API response")))
+                completion(.failure(DownloadServiceError.extractionFailed("Invalid API response from client \(client.name)")))
                 return
             }
 
-            // Check for playability
-            if let playabilityStatus = json["playabilityStatus"] as? [String: Any],
-               let status = playabilityStatus["status"] as? String,
-               status != "OK" {
-                let reason = playabilityStatus["reason"] as? String ?? "Video unavailable"
-                completion(.failure(DownloadServiceError.extractionFailed(reason)))
+            // Check playability
+            if let status = json["playabilityStatus"] as? [String: Any],
+               let statusStr = status["status"] as? String,
+               statusStr != "OK" {
+                let reason = status["reason"] as? String ?? statusStr
+                completion(.failure(DownloadServiceError.extractionFailed("[\(client.name)] \(reason)")))
                 return
             }
 
@@ -155,39 +226,35 @@ class YouTubeExtractor {
                 }
             }
 
-            // Extract streaming formats
             guard let streamingData = json["streamingData"] as? [String: Any] else {
-                completion(.failure(DownloadServiceError.extractionFailed("No streaming data found")))
+                completion(.failure(DownloadServiceError.extractionFailed("[\(client.name)] No streaming data")))
                 return
             }
 
-            // Try adaptive formats first (better quality), then regular formats
             let adaptiveFormats = streamingData["adaptiveFormats"] as? [[String: Any]] ?? []
             let regularFormats = streamingData["formats"] as? [[String: Any]] ?? []
             let allFormats = adaptiveFormats + regularFormats
 
-            // Pick best format based on preference
+            // Select best format
             let selectedFormat: [String: Any]?
 
             if preferAudio {
-                // Best audio-only: prefer opus/webm or m4a
                 let audioFormats = adaptiveFormats.filter {
                     ($0["mimeType"] as? String)?.contains("audio") == true
                 }
-                // Sort by bitrate descending
                 let sorted = audioFormats.sorted {
                     ($0["bitrate"] as? Int ?? 0) > ($1["bitrate"] as? Int ?? 0)
                 }
-                // Prefer m4a (mp4a) for better iOS compatibility
+                // Prefer m4a for iOS compatibility
                 selectedFormat = sorted.first(where: {
                     ($0["mimeType"] as? String)?.contains("mp4a") == true
                 }) ?? sorted.first
             } else {
-                // Best video with audio: prefer mp4, reasonable resolution
-                let videoFormats = regularFormats.filter {
+                // For video: prefer progressive mp4 with both audio+video (regular formats)
+                let mp4Formats = regularFormats.filter {
                     ($0["mimeType"] as? String)?.contains("video/mp4") == true
                 }
-                let sorted = videoFormats.sorted {
+                let sorted = mp4Formats.sorted {
                     ($0["bitrate"] as? Int ?? 0) > ($1["bitrate"] as? Int ?? 0)
                 }
                 selectedFormat = sorted.first ?? allFormats.first
@@ -195,9 +262,9 @@ class YouTubeExtractor {
 
             guard let format = selectedFormat,
                   let urlString = format["url"] as? String,
+                  !urlString.isEmpty,
                   let streamURL = URL(string: urlString) else {
-                // If no direct URL, might need signature deciphering (rare with IOS client)
-                completion(.failure(DownloadServiceError.extractionFailed("Could not extract direct stream URL. Video may be age-restricted.")))
+                completion(.failure(DownloadServiceError.extractionFailed("[\(client.name)] No direct URL in format. Video may require signature deciphering.")))
                 return
             }
 
@@ -207,10 +274,6 @@ class YouTubeExtractor {
 }
 
 // MARK: - DownloadService
-// Full download manager:
-// - YouTube/YT Music: extracts direct stream URL via innertube API (no server needed)
-// - Direct URLs (mp3/mp4/etc): downloads directly via URLSession
-// - Progress tracking, library persistence, queue management
 class DownloadService: ObservableObject {
     static let shared = DownloadService()
 
@@ -248,8 +311,7 @@ class DownloadService: ObservableObject {
         }
         do {
             let data = try Data(contentsOf: libraryStorageURL)
-            let decoded = try JSONDecoder().decode([MediaItem].self, from: data)
-            libraryItems = decoded
+            libraryItems = try JSONDecoder().decode([MediaItem].self, from: data)
         } catch {
             print("[DownloadService] Failed to load library: \(error)")
             libraryItems = []
@@ -286,32 +348,23 @@ class DownloadService: ObservableObject {
     private func ensureDownloadsDirectoryExists() {
         let url = documentsURL.appendingPathComponent(downloadsSubdirectory)
         if !fileManager.fileExists(atPath: url.path) {
-            do {
-                try fileManager.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
-            } catch {
-                print("[DownloadService] Error creating downloads directory: \(error)")
-            }
+            try? fileManager.createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
         }
     }
 
     // MARK: - URL Validation
     func validateURL(_ urlString: String) -> Bool {
-        guard let url = URL(string: urlString.trimmingCharacters(in: .whitespacesAndNewlines)) else {
-            return false
-        }
-        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
-            return false
-        }
+        guard let url = URL(string: urlString.trimmingCharacters(in: .whitespacesAndNewlines)) else { return false }
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return false }
         guard url.host != nil else { return false }
         return true
     }
 
-    // MARK: - Start Download (main entry point)
+    // MARK: - Start Download
     @discardableResult
     func startDownload(sourceURL: String, quality: DownloadQuality) -> UUID {
         let mediaItemID = UUID()
 
-        // Add to library immediately so UI updates
         let mediaItem = MediaItem(
             id: mediaItemID,
             title: "Extracting...",
@@ -339,7 +392,6 @@ class DownloadService: ObservableObject {
         )
         queueManager.addTask(downloadTask)
 
-        // Route: YouTube or direct URL
         if let url = URL(string: sourceURL), YouTubeExtractor.isSupported(url: url) {
             beginYouTubeDownload(task: downloadTask, url: url)
         } else {
@@ -349,14 +401,13 @@ class DownloadService: ObservableObject {
         return mediaItemID
     }
 
-    // MARK: - YouTube Download (via innertube API)
+    // MARK: - YouTube Download
     private func beginYouTubeDownload(task: DownloadTask, url: URL) {
         guard let videoID = YouTubeExtractor.extractVideoID(from: url) else {
             finalizeTask(taskID: task.id, mediaItemID: task.mediaItemID, status: .failed, error: .extractionFailed("Could not extract video ID from URL"))
             return
         }
 
-        // Mark as extracting
         updateTaskStatus(taskID: task.id, mediaItemID: task.mediaItemID, status: .extracting, progress: 0.0)
 
         let preferAudio = task.quality == .audioMP3
@@ -366,7 +417,6 @@ class DownloadService: ObservableObject {
 
             switch result {
             case .success(let info):
-                // Update title/artist from extraction
                 DispatchQueue.main.async {
                     if let index = self.libraryItems.firstIndex(where: { $0.id == task.mediaItemID }) {
                         self.libraryItems[index].title = info.title
@@ -375,9 +425,6 @@ class DownloadService: ObservableObject {
                         self.saveLibrary()
                     }
                 }
-
-                // Now download the actual stream file
-                // FIX: changed `var` to `let` — streamTask was never mutated
                 let streamTask = task
                 self.beginActualDownload(task: streamTask, overrideURL: info.streamURL)
 
@@ -401,7 +448,7 @@ class DownloadService: ObservableObject {
         beginActualDownload(task: task, overrideURL: url)
     }
 
-    // MARK: - Actual File Download (URLSession)
+    // MARK: - Actual File Download
     private func beginActualDownload(task: DownloadTask, overrideURL: URL) {
         let destinationFileName = task.destinationFileName
         let destinationURL = downloadsDirectoryURL.appendingPathComponent(destinationFileName)
@@ -420,11 +467,12 @@ class DownloadService: ObservableObject {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 120
         config.timeoutIntervalForResource = 600
-        // YouTube requires these headers to accept download requests
+        // YouTube stream URLs require these headers or you get 403
         config.httpAdditionalHeaders = [
-            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            "User-Agent": "com.google.android.apps.youtube.vr.oculus/1.60.19 (Linux; U; Android 12; GB) gzip",
             "Accept": "*/*",
             "Accept-Language": "en-US,en;q=0.9",
+            "Origin": "https://www.youtube.com",
             "Referer": "https://www.youtube.com/"
         ]
 
@@ -440,7 +488,7 @@ class DownloadService: ObservableObject {
         downloadTaskSession.resume()
     }
 
-    // MARK: - Internal Progress Handlers (called by DownloadDelegate)
+    // MARK: - Progress Handlers
     func handleDownloadProgress(taskID: UUID, mediaItemID: UUID, progress: Double, downloadedBytes: Int64, totalBytes: Int64, speed: Double) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -487,31 +535,23 @@ class DownloadService: ObservableObject {
         }
     }
 
-    // MARK: - Metadata Extraction
-    // FIX: Removed async asset.load(.duration) call — replaced with synchronous
-    // asset.duration which works fine for local files and doesn't require async context
+    // MARK: - Metadata Extraction (synchronous, local files only)
     private func extractMetadata(from url: URL) -> (title: String, artist: String, duration: TimeInterval?) {
         let asset = AVAsset(url: url)
         var title: String? = nil
         var artist: String? = nil
         var duration: TimeInterval? = nil
 
-        // Use synchronous commonMetadata for local files (fine for local URLs)
         let metadata = asset.commonMetadata
         for item in metadata {
             if item.commonKey == .commonKeyTitle, let val = item.value as? String { title = val }
             if item.commonKey == .commonKeyArtist, let val = item.value as? String { artist = val }
         }
 
-        // FIX: Use synchronous asset.duration instead of async asset.load(.duration)
-        // This avoids the "async call in non-async function" compile error
         let cmDuration = asset.duration
         let secs = CMTimeGetSeconds(cmDuration)
-        if secs.isFinite && secs > 0 {
-            duration = secs
-        }
+        if secs.isFinite && secs > 0 { duration = secs }
 
-        // Fallback: derive from filename
         if title == nil || title!.isEmpty {
             title = url.lastPathComponent
                 .replacingOccurrences(of: ".mp4", with: "")
@@ -524,9 +564,6 @@ class DownloadService: ObservableObject {
 
         return (title ?? "Premium Download", artist ?? "PremiumPlayer Library", duration)
     }
-
-    // MARK: - Queue Processing
-    private func processQueue() {}
 
     // MARK: - Task State Updates
     private func updateTaskStatus(taskID: UUID, mediaItemID: UUID, status: DownloadTaskStatus, progress: Double) {
@@ -617,7 +654,7 @@ class DownloadService: ObservableObject {
         }
     }
 
-    // MARK: - Delete Downloaded File
+    // MARK: - Delete
     func deleteMediaItem(_ item: MediaItem) {
         if let absoluteURL = item.localAbsoluteURL {
             try? fileManager.removeItem(at: absoluteURL)
@@ -626,11 +663,9 @@ class DownloadService: ObservableObject {
         saveLibrary()
     }
 
-    // MARK: - Clear All Downloads
+    // MARK: - Clear All
     func clearAllDownloads() {
-        for (_, delegate) in downloadDelegates {
-            delegate.downloadTask?.cancel()
-        }
+        for (_, delegate) in downloadDelegates { delegate.downloadTask?.cancel() }
         downloadDelegates.removeAll()
         for item in libraryItems {
             if let absoluteURL = item.localAbsoluteURL {
@@ -642,7 +677,7 @@ class DownloadService: ObservableObject {
         saveLibrary()
     }
 
-    // MARK: - Cache / Storage
+    // MARK: - Cache
     func computeCacheSize() -> Int64 {
         var totalSize: Int64 = 0
         guard let enumerator = fileManager.enumerator(at: downloadsDirectoryURL, includingPropertiesForKeys: [.fileSizeKey]) else { return 0 }
@@ -670,9 +705,11 @@ class DownloadService: ObservableObject {
         formatter.countStyle = .file
         return formatter.string(fromByteCount: computeCacheSize())
     }
+
+    private func processQueue() {}
 }
 
-// MARK: - DownloadDelegate (URLSessionDownloadDelegate)
+// MARK: - DownloadDelegate
 class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
     let taskID: UUID
     let mediaItemID: UUID
@@ -739,7 +776,7 @@ class DownloadDelegate: NSObject, URLSessionDownloadDelegate {
     }
 }
 
-// MARK: - SessionDelegate (background session)
+// MARK: - SessionDelegate
 class SessionDelegate: NSObject, URLSessionDelegate {
     private weak var downloadService: DownloadService?
     init(downloadService: DownloadService) {
