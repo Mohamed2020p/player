@@ -377,9 +377,8 @@ class DownloadService: ObservableObject {
                 }
 
                 // Now download the actual stream file
-                var streamTask = task
-                // We keep sourceURL as original YouTube URL for reference,
-                // but download from the extracted stream URL
+                // FIX: changed `var` to `let` — streamTask was never mutated
+                let streamTask = task
                 self.beginActualDownload(task: streamTask, overrideURL: info.streamURL)
 
             case .failure(let error):
@@ -489,23 +488,27 @@ class DownloadService: ObservableObject {
     }
 
     // MARK: - Metadata Extraction
+    // FIX: Removed async asset.load(.duration) call — replaced with synchronous
+    // asset.duration which works fine for local files and doesn't require async context
     private func extractMetadata(from url: URL) -> (title: String, artist: String, duration: TimeInterval?) {
-        // Try AVAsset first for real title/duration from file tags
         let asset = AVAsset(url: url)
         var title: String? = nil
         var artist: String? = nil
         var duration: TimeInterval? = nil
 
-        // Load metadata synchronously (file is local so it's fine)
+        // Use synchronous commonMetadata for local files (fine for local URLs)
         let metadata = asset.commonMetadata
         for item in metadata {
             if item.commonKey == .commonKeyTitle, let val = item.value as? String { title = val }
             if item.commonKey == .commonKeyArtist, let val = item.value as? String { artist = val }
         }
 
-        if let d = try? asset.load(.duration) {
-            let secs = CMTimeGetSeconds(d)
-            if secs.isFinite && secs > 0 { duration = secs }
+        // FIX: Use synchronous asset.duration instead of async asset.load(.duration)
+        // This avoids the "async call in non-async function" compile error
+        let cmDuration = asset.duration
+        let secs = CMTimeGetSeconds(cmDuration)
+        if secs.isFinite && secs > 0 {
+            duration = secs
         }
 
         // Fallback: derive from filename
@@ -558,7 +561,6 @@ class DownloadService: ObservableObject {
             }
 
             if let index = self.libraryItems.firstIndex(where: { $0.id == mediaItemID }) {
-                // Preserve extracted YouTube title/artist if already set and better than filename
                 let existingTitle = self.libraryItems[index].title
                 let existingArtist = self.libraryItems[index].artist
                 self.libraryItems[index].downloadState = .completed
